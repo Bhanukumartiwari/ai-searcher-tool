@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AI Smart Searcher — Govt Exams</title>
+
+  <!-- AdSense -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2635"
+          crossorigin="anonymous"></script>
+
+  <style>
+    :root{
+      --bg:#0b0f14; --panel:#101820; --ink:#e6f0ff; --muted:#9db3cc;
+      --accent:#2d7dff; --accent-2:#0bd1ff; --ok:#13c27a; --warn:#ffb020; --err:#ff5a5a;
+      --chip:#0f273d; --border:#1d2a38;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,Segoe UI,Roboto,Inter}
+    a{color:var(--accent)}
+    header{position:sticky;top:0;z-index:10;background:linear-gradient(180deg, rgba(16,24,32,.95), rgba(16,24,32,.7));backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
+    .wrap{max-width:1100px;margin:0 auto;padding:14px}
+    .brand{display:flex;gap:10px;align-items:center}
+    .logo{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--accent),var(--accent-2));box-shadow:0 0 0 2px #0b1420}
+    .title{font-weight:700;letter-spacing:.2px}
+    .grid{display:grid;gap:12px;grid-template-columns:1fr}
+    @media(min-width:880px){.grid{grid-template-columns:1.2fr .8fr}}
+    .panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+    .panel header{position:static;background:none;border:0;padding:0}
+    .controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .chip{background:var(--chip);border:1px solid var(--border);color:var(--ink);padding:8px 10px;border-radius:10px;display:flex;align-items:center;gap:8px}
+    select,button,input[type="file"]{background:var(--chip);color:var(--ink);border:1px solid var(--border);border-radius:10px;padding:8px 10px}
+    button.primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#001326;border:none;cursor:pointer}
+    .bar{display:flex;gap:8px;margin-top:10px}
+    .bar input{flex:1;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:#0d1722;color:var(--ink)}
+    .bar button{padding:12px 16px;border-radius:12px}
+    .results{padding:14px}
+    .answer{background:#0d1520;border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px}
+    .meta{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+    .meta span{font-size:12px;color:var(--muted);background:#0e1b29;border:1px solid var(--border);padding:4px 8px;border-radius:8px}
+    .sources{font-size:13px;color:var(--muted)}
+    .divider{height:1px;background:var(--border);margin:12px 0}
+    .ads{height:90px;border:1px dashed var(--border);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px}
+    .side{padding:14px}
+    .widget{background:#0d1520;border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px}
+    .list li{margin:6px 0}
+    .badge{color:#001326;background:linear-gradient(135deg,var(--ok),#b7ffd9);padding:2px 8px;border-radius:999px;font-weight:700;font-size:11px}
+    .warn{color:var(--warn)}
+    .hint{color:var(--muted);font-size:12px}
+    footer{color:var(--muted);font-size:12px;padding:20px;text-align:center}
+    .loading{display:none;color:var(--accent);font-size:13px;margin:10px 0}
+    .loading.active{display:block}
+  </style>
+
+  <!-- OCR: Tesseract.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="brand">
+        <div class="logo"></div>
+        <div>
+          <div class="title">AI Smart Searcher</div>
+          <div class="hint">UPSC • SSC • IBPS • RRB • State PSC</div>
+        </div>
+      </div>
+      <div class="controls">
+        <select id="exam">
+          <option>UPSC</option>
+          <option>SSC</option>
+          <option>IBPS</option>
+          <option>RRB</option>
+          <option>State PSC</option>
+        </select>
+        <select id="mode">
+          <option value="prelims">Prelims (facts)</option>
+          <option value="mains">Mains (analysis)</option>
+          <option value="interview">Interview</option>
+        </select>
+        <select id="lang">
+          <option value="en">English</option>
+          <option value="hi">Hindi</option>
+        </select>
+        <label class="chip"><input type="checkbox" id="pyq"> PYQ Focus</label>
+        <label class="chip"><input type="checkbox" id="ca"> Current Affairs</label>
+        <input type="file" id="img" accept="image/*" />
+        <button class="primary" id="ocrBtn">OCR Solve</button>
+      </div>
+      <div class="bar">
+        <input id="q" placeholder="Ask anything (e.g., Explain Fundamental Rights for UPSC Prelims)"/>
+        <button class="primary" id="searchBtn">Search</button>
+      </div>
+      <div class="loading" id="loading">⏳ Getting answer from AI...</div>
+      <div class="ads">Ad slot (auto ads will render here)</div>
+    </div>
+  </header>
+
+  <main class="wrap grid">
+    <section class="panel">
+      <div class="results" id="results">
+        <div class="answer">
+          <div class="meta"><span>Tip</span><span>Type: 'Inflation trends 2023 impact on RBI GS3'</span></div>
+          <div>Start by selecting an exam and mode, then search or upload a question screenshot to get a concise, cited answer with 10 practice questions and PYQ tags.</div>
+        </div>
+      </div>
+    </section>
+    <aside class="side">
+      <div class="widget">
+        <div style="display:flex;align-items:center;gap:8px;justify-content:space-between">
+          <div>Weak Topics</div><span class="badge">AUTO</span>
+        </div>
+        <ul class="list" id="weakList"></ul>
+        <div class="hint">Stored locally on your device.</div>
+      </div>
+      <div class="widget">
+        <div>Micro Plan (3 days)</div>
+        <ul class="list" id="planList"></ul>
+      </div>
+      <div class="widget">
+        <div>Quick Toggles</div>
+        <ul class="list">
+          <li><a href="#" data-quick="Fiscal deficit causes and effects (Mains)">Fiscal deficit (Mains)</a></li>
+          <li><a href="#" data-quick="Static GK: Mughal administration (Prelims)">Static GK: Mughals</a></li>
+          <li><a href="#" data-quick="Seating arrangement with 8 people facing center">Seating arrangement</a></li>
+        </ul>
+      </div>
+      <div class="ads">Ad slot</div>
+    </aside>
+  </main>
+
+  <footer>© 2025 AI Smart Searcher. Exam-focused AI search with OCR.</footer>
+
+<script>
+/* ---------- CONFIG: CHANGE THIS AFTER VERCEL DEPLOYMENT ---------- */
+const BACKEND_API = "https://YOUR-VERCEL-APP.vercel.app/api/query";
+// ⬆️ REPLACE with your actual Vercel URL after you deploy backend
+
+/* ---------- Utilities & State ---------- */
+const $ = sel => document.querySelector(sel);
+const results = $('#results');
+const weakList = $('#weakList');
+const planList = $('#planList');
+const loading = $('#loading');
+
+const state = {
+  weak: JSON.parse(localStorage.getItem('weak')||'[]'),
+  plan: JSON.parse(localStorage.getItem('plan')||'[]'),
+};
+
+/* ---------- Build query context ---------- */
+function buildQueryContext(userQ){
+  const exam = $('#exam').value;
+  const mode = $('#mode').value;
+  const lang = $('#lang').value;
+  const pyq = $('#pyq').checked;
+  const ca = $('#ca').checked;
+
+  return `You are an AI assistant for Indian government exam preparation.
+Exam: ${exam}, Mode: ${mode}, Language: ${lang}
+${pyq ? 'Include previous year questions (PYQ) analysis.' : ''}
+${ca ? 'Focus on current affairs and recent developments.' : ''}
+
+Question: ${userQ}
+
+Provide a concise, exam-focused answer with:
+- Key facts and definitions
+- 2-3 examples or data points
+- Previous year question patterns (if PYQ enabled)
+- 5 practice questions
+
+Format in HTML with proper structure.`;
+}
+
+/* ---------- Call Backend API ---------- */
+async function getAIAnswer(prompt){
+  try{
+    loading.classList.add('active');
+    const response = await fetch(BACKEND_API, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ query: prompt })
+    });
+    
+    if(!response.ok) throw new Error('API Error');
+    
+    const data = await response.json();
+    loading.classList.remove('active');
+    
+    // Extract text from Gemini response
+    if(data.candidates && data.candidates[0]){
+      return data.candidates[0].content.parts[0].text;
+    }
+    return "Unable to get response. Please try again.";
+    
+  }catch(e){
+    loading.classList.remove('active');
+    console.error(e);
+    return `<p style="color:var(--err)">Error connecting to AI backend. Make sure your Vercel backend is deployed and the URL is correct.</p>`;
+  }
+}
+
+/* ---------- Render Answer ---------- */
+function renderAnswer(answerHtml, query){
+  const exam = $('#exam').value;
+  const mode = $('#mode').value;
+  
+  const node = document.createElement('div');
+  node.className = 'answer';
+  node.innerHTML = `
+    <div class="meta">
+      <span>${exam}</span>
+      <span>${mode}</span>
+      <span>${new Date().toLocaleString()}</span>
+    </div>
+    <div><strong>Q:</strong> ${query}</div>
+    <div class="divider"></div>
+    ${answerHtml}
+    <div class="divider"></div>
+    <div class="sources"><small>Powered by Gemini AI</small></div>
+  `;
+  results.prepend(node);
+
+  // Update weak topics (simplified)
+  const topics = [exam, mode];
+  state.weak = Array.from(new Set([...topics, ...state.weak])).slice(0,10);
+  localStorage.setItem('weak', JSON.stringify(state.weak));
+  drawWeak();
+  planFromWeak();
+}
+
+function drawWeak(){
+  weakList.innerHTML = (state.weak.length? state.weak: ['Polity','Economy','Reasoning']).map(t=>`<li>${t}</li>`).join('');
+}
+
+function planFromWeak(){
+  const plan = state.weak.slice(0,3).map((t,i)=>`Day ${i+1}: ${t} — 60 mins`);
+  state.plan = plan;
+  localStorage.setItem('plan', JSON.stringify(plan));
+  planList.innerHTML = plan.map(x=>`<li>${x}</li>`).join('');
+}
+
+/* ---------- OCR Pipeline ---------- */
+async function ocrImage(file){
+  if(!file) throw new Error('No image selected');
+  loading.classList.add('active');
+  const worker = await Tesseract.createWorker('eng');
+  const { data: { text } } = await worker.recognize(file);
+  await worker.terminate();
+  loading.classList.remove('active');
+  return text;
+}
+
+/* ---------- Events ---------- */
+$('#searchBtn').addEventListener('click', async ()=>{
+  const userQ = $('#q').value.trim();
+  if(!userQ) return alert('Please enter a question');
+  
+  const prompt = buildQueryContext(userQ);
+  const answer = await getAIAnswer(prompt);
+  renderAnswer(answer, userQ);
+});
+
+$('#ocrBtn').addEventListener('click', async ()=>{
+  const file = $('#img').files[0];
+  if(!file) { alert('Choose an image first'); return; }
+  
+  const text = await ocrImage(file);
+  $('#q').value = text.slice(0,500);
+  
+  const prompt = buildQueryContext(text);
+  const answer = await getAIAnswer(prompt);
+  renderAnswer(answer, text.slice(0,100) + '...');
+});
+
+document.querySelectorAll('[data-quick]').forEach(a=>{
+  a.addEventListener('click', (e)=>{
+    e.preventDefault();
+    $('#q').value = a.dataset.quick;
+  });
+});
+
+/* Init */
+drawWeak(); planFromWeak();
+</script>
+</body>
+</html>
